@@ -1,0 +1,90 @@
+<html>
+    <head>
+        <title>
+            Chat Demo(Go + H5)
+        </title>
+        <style>
+            #log {
+                height: 50%;
+                width: 100%;
+                overflow: auto;
+                border: 1px solid #eee;
+                padding: 10px;
+                font-size: 16px;
+                line-height: 1.5;
+            }
+
+            #form {
+                margin-top: 20px;
+                font-size: 16px;
+            }
+
+            #text {
+                width: 50%;
+                font-size: 16px;
+                padding: 10px;
+            }
+
+            #submit {
+                font-size: 16px;
+                padding: 10px 20px;
+                margin: 0 10px;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="log">
+        </div>
+        <div id="form">
+            <input id="text" onkeyup="onTextChange(event)"/>
+            <button onClick="sendMsg()" id="submit">Send</button>
+        </div>
+        <script>
+            var conn;
+            var log = document.getElementById("log");
+            var text = document.getElementById("text");
+
+            function appendLog(text, bold) {
+                var item = document.createElement("div");
+                item.innerHTML = bold ? ('<b>' + text + '</b>') : text;
+                log.appendChild(item);
+            }
+            
+            function onTextChange(e) {
+                console.log(e);
+                
+                if (e.keyCode === 13) {
+                    sendMsg();
+                }
+            }
+
+            function sendMsg() {
+                if (!conn) {
+                    return false;
+                }
+                var msg = text.value;
+                if (!msg) {
+                    return false;
+                }
+                conn.send(msg);
+                text.value = "";
+            };
+
+            if (window["WebSocket"]) {
+                conn = new WebSocket("ws://" + document.location.host + "/ws");
+                conn.onclose = function (evt) {
+                    appendLog('Connection closed.', true);
+                };
+
+                conn.onmessage = function (evt) {
+                    var messages = evt.data.split('\n');
+                    for (var i = 0; i < messages.length; i++) {
+                        appendLog(messages[i]);
+                    }
+                };
+            } else {
+                alert("Your browser does not support WebSockets.");
+            }
+        </script>
+    </body>
+</html>
