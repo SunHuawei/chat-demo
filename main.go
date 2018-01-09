@@ -14,15 +14,33 @@ var upgrader = websocket.Upgrader{
 
 var clients []*websocket.Conn
 
+func closeConn(conn *websocket.Conn) {
+	conn.Close()
+
+	for i, c := range clients {
+		if c == conn {
+			clients = append(clients[:i], clients[i + 1:]...)
+		}
+	}
+
+}
+
 // serveWs handles websocket requests from the peer.
 func serveWs(w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
+
+	defer func() {
+		closeConn(conn)
+		log.Println("Clients:", clients)
+	}()
+
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
 	clients = append(clients, conn)
+	log.Println("Clients:", clients)
 
 	for {
 		messageType, p, err := conn.ReadMessage()
@@ -31,11 +49,15 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		for _, c := range clients {
-			if err := c.WriteMessage(messageType, p); err != nil {
-				log.Println(err)
-				return
-			}
+		broadcast(messageType, p)
+	}
+}
+
+func broadcast(messageType int, message []byte) {
+	for _, c := range clients {
+		if err := c.WriteMessage(messageType, message); err != nil {
+			log.Println(err)
+			return
 		}
 	}
 }
